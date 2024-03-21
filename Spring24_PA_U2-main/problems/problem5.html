@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>CPSC 487/587</title>
+    <script src="../../js/setup/setup_mathjax.js"></script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lil-gui@0.19.1/dist/lil-gui.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/10.3.0/math.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/quaternion@1.5.1/quaternion.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/numeric@1.2.6/numeric-1.2.6.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stats.js@0.17.0/build/stats.min.js"></script>
+    <script type="importmap">
+        {
+            "imports": {
+              "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+              "three/": "https://unpkg.com/three@0.160.0/"
+            }
+        }
+    </script>
+</head>
+<body>
+<script type="module">
+    import {ThreeEngine} from "../js/utils/utils_three.js";
+
+    // todo: recreate this visualization, demonstrating your understanding of SE(2)
+    // todo: https://yale-cpsc-487-587-internal-djrakita-c95fa6c3239a481a48d29a6b0fd.gitlab.io/html/visualizations/point_mapping_2D_direct_isometry.html
+    // todo: (no need to draw the unit circle here)
+    // todo: or, feel free to come up with any create visualization here that demonstrates your understanding of SE(2)
+
+    // All code below are coded by me:
+    // Import needed helpers
+    import {get_default_lil_gui} from "../../js/utils/utils_three.js";
+    import {mul_matrix_matrix} from "../../js/utils/utils_math.js";
+    import {refresh_displays} from "../../js/utils/utils_three.js";
+
+    // Init engine and spawn the weird 2D shape
+    let engine = ThreeEngine.new_default_2d();
+    engine.add_standard2Dshape_as_mesh_object(0x00eeff);
+
+    // The entries values of SE(2) at theta=0, tx=0, ty=0.
+    // NOTE: these are the default values.
+    let m00 = 1,  // cos(0)
+        m01 = 0,  // -sin(0)
+        m10 = 0,  // sin(0)
+        m11 = 1,  // cos(0)
+        m02 = 0,  // tx = 0
+        m12 = 0,  // ty = 0
+        m20 = 0,  // by default.
+        m21 = 0,
+        m22 = 1;
+
+    // Set up the GUI
+    let settings = {
+        mesh_visible: false,  // init states
+        draw_points: true,
+        wireframe_visible: true,
+        point_size: 0.02,
+        tx: 0,
+        ty: 0,
+        theta: 0,
+    }
+
+    let actions = {
+        reset_matrix: function() {
+            settings.theta = 0;
+            settings.tx = 0;
+            settings.ty = 0;
+            refresh_displays(gui);
+            m00 = 1;
+            m01 = 0;
+            m10 = 0;
+            m11 = 1;
+            m02 = 0;
+            m12 = 0;
+        }
+    };
+
+    let gui = get_default_lil_gui();
+    gui.add(settings, 'draw_points').name('Draw Points');
+    gui.add(settings, 'wireframe_visible').name('Draw Wireframe');
+    gui.add(settings, 'mesh_visible').name('Draw Mesh');
+    gui.add(settings, 'point_size', 0.001, 0.03).name('Point Size');
+
+    let folder = gui.addFolder('Isometry Controls');
+    folder.add(settings, 'tx', -2, 2).name('Translation x');
+    folder.add(settings, 'ty', -2, 2).name('Translation y');
+    folder.add(settings, 'theta', -Math.PI, Math.PI).name('Rotation angle');
+    folder.add(actions, 'reset_matrix').name('Reset');  // the button
+
+    // Create the points
+    let standard_points = engine.get_local_vertex_positions_of_mesh_object(0);
+    let wireframe_points = engine.get_local_vertex_positions_of_mesh_object_wireframe(0);
+
+    // Draw the visualization
+    engine.animation_loop(function() {
+        // Update the SO(2) portion in SE(2) based on theta.
+        m00 = Math.cos(settings.theta);
+        m01 = -Math.sin(settings.theta);
+        m10 = Math.sin(settings.theta);
+        m11 = Math.cos(settings.theta);
+        // Update the Translation portion in SE(2) based on tx and ty.
+        m02 = settings.tx;
+        m12 = settings.ty;
+
+        let m = [[m00, m01, m02], [m10, m11, m12], [m20, m21, m22]];  // 3x3 matrix.
+
+        // Transform the original points via
+        // 1) append dummy field 1 to the end of pi
+        // 2) MATMUL by the rotational SO(2) matrix.
+        // 3) remove last entry in the resulting 3-vector to obtain 2-vector.
+        let new_standard_points = standard_points.map(point => mul_matrix_matrix(m, [...point, 1]).slice(0, 2));
+        let new_wireframe_points = wireframe_points.map(point => mul_matrix_matrix(m, [...point, 1]).slice(0, 2));
+
+        // Update the rest.
+        engine.update_vertex_positions_of_mesh_object(0, new_standard_points);
+        engine.update_vertex_positions_of_mesh_object_wireframe(0, new_wireframe_points);
+
+        if (settings.draw_points) {
+            new_standard_points.forEach(point => {
+                engine.draw_debug_sphere(point, settings.point_size, 0xeeee00);
+            });
+        }
+
+        engine.mesh_objects[0].visible = settings.mesh_visible;
+        engine.set_mesh_object_wireframe_visibility(0, settings.wireframe_visible);
+    });
+
+</script>
+</body>
+</html>

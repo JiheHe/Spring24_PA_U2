@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>CPSC 487/587</title>
+    <script src="../../js/setup/setup_mathjax.js"></script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lil-gui@0.19.1/dist/lil-gui.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/10.3.0/math.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/quaternion@1.5.1/quaternion.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/numeric@1.2.6/numeric-1.2.6.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stats.js@0.17.0/build/stats.min.js"></script>
+    <script type="importmap">
+        {
+            "imports": {
+              "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+              "three/": "https://unpkg.com/three@0.160.0/"
+            }
+        }
+    </script>
+</head>
+<body>
+<script type="module">
+    import {ThreeEngine} from "../js/utils/utils_three.js";
+
+    // todo: recreate this visualization, demonstrating your understanding of displacement-based distance in SE(2)
+    // todo: https://yale-cpsc-487-587-internal-djrakita-c95fa6c3239a481a48d29a6b0fd.gitlab.io/html/visualizations/SE2_distance2.html
+    // todo: make sure you are using the displacement-based distance!
+    // todo: or, feel free to come up with any create visualization here that demonstrates your understanding of SE(2) distance
+
+    // Idea: make two sets of controllable SE(2) elements, then an ineditable field at the bottom displaying the distance
+    // between the two SE(2) elements.
+
+    // All code below are coded by me:
+    // Import needed helpers
+    import {get_default_lil_gui} from "../../js/utils/utils_three.js";
+    import {mul_matrix_matrix} from "../../js/utils/utils_math.js";
+    import {refresh_displays} from "../../js/utils/utils_three.js";
+    import {frobenius_norm_matrix} from "../../js/utils/utils_math.js";
+
+    // Init engine
+    let engine = ThreeEngine.new_default_2d();
+
+    // The entries values of SE(2)_1 and SE(2)_2 at theta=0, tx=0, ty=0.
+    let m_1 = [ [1, 0, 0],
+                [0, 1, 0],
+                [0, 0, 1] ]
+    let m_2 = [ [1, 0, 0],
+                [0, 1, 0],
+                [0, 0, 1] ]
+
+    // Set up the GUI
+    let settings = {
+        tx1: 0,
+        ty1: 0,
+        theta1: 0,
+        tx2: 0,
+        ty2: 0,
+        theta2: 0,
+        disp_based_dist_string: 0
+    }
+
+    let actions = {
+        reset1: function() {
+            settings.theta1 = 0;
+            settings.tx1 = 0;
+            settings.ty1 = 0;
+            refresh_displays(gui);
+            m_1 = [ [1, 0, 0],
+                    [0, 1, 0],
+                    [0, 0, 1] ]
+        },
+        reset2: function() {
+            settings.theta2 = 0;
+            settings.tx2 = 0;
+            settings.ty2 = 0;
+            refresh_displays(gui);
+            m_2 = [ [1, 0, 0],
+                    [0, 1, 0],
+                    [0, 0, 1] ]
+        }
+    };
+
+    let gui = get_default_lil_gui();
+    gui.add(settings, 'theta1', -2*Math.PI, 2*Math.PI).name('Theta1');
+    gui.add(settings, 'tx1', -2, 2).name('tx1');
+    gui.add(settings, 'ty1', -2, 2).name('ty1');
+    gui.add(actions, 'reset1').name('reset1');  // the button
+    gui.add(settings, 'theta2', -2*Math.PI, 2*Math.PI).name('Theta2');
+    gui.add(settings, 'tx2', -2, 2).name('tx2');
+    gui.add(settings, 'ty2', -2, 2).name('ty2');
+    gui.add(actions, 'reset2').name('reset2');  // the button
+    gui.add(settings, 'disp_based_dist_string').name('disp based dis').disable();
+
+    // Draw the visualization
+    engine.animation_loop(function() {
+        // Update the SO(2) portion in SE(2) based on theta.
+        // Update the Translation portion in SE(2) based on tx and ty.
+        // for both m_1 and m_2.
+        m_1 = [ [Math.cos(settings.theta1), -Math.sin(settings.theta1), settings.tx1],
+                [Math.sin(settings.theta1), Math.cos(settings.theta1), settings.ty1],
+                [0, 0, 1] ]
+        m_2 = [ [Math.cos(settings.theta2), -Math.sin(settings.theta2), settings.tx2],
+                [Math.sin(settings.theta2), Math.cos(settings.theta2), settings.ty2],
+                [0, 0, 1] ]
+        // Obtain the standard vector for each m.
+        let c1 = [1, 0, 1];  // 1-appended
+        let c2 = [0, 1, 1];
+        let c1_m1 = mul_matrix_matrix(m_1, c_1).slice(0, 2),  // apply the transformation
+            c2_m1 = mul_matrix_matrix(m_1, c_2).slice(0, 2),
+            c1_m2 = mul_matrix_matrix(m_2, c_1).slice(0, 2),
+            c2_m2 = mul_matrix_matrix(m_2, c_2).slice(0, 2);
+        // Draw the vectors. Visualization is done.
+        engine.draw_debug_vector([0,0], c1_m1, 0.035, undefined, 0xff0000);
+        engine.draw_debug_vector([0,0], c2_m1, 0.035, undefined, 0x00ff00);
+        engine.draw_debug_vector([0,0], c1_m2, 0.035, undefined, 0xff3333);
+        engine.draw_debug_vector([0,0], c2_m2, 0.035, undefined, 0x33ff33);
+
+        // Calculate disp-based dist.
+        // Step 1: find disp(m1, m2) = m1^-1 MATMUL m2.
+        // Use the given formula in the notes to calculate inverse of SE(2):
+        let m1_inverse = [  [m_1[0][0], m_1[1][0],   m_1[0][0]*-1*m_1[0][2] + m_1[1][0]*-1*m_1[1][2]],
+                            [m_1[0][1], m_1[1][1],   m_1[0][1]*-1*m_1[0][2] + m_1[1][1]*-1*m_1[1][2]],
+                            [0, 0, 1]  ];
+        let disp = mul_matrix_matrix(m1_inverse, m_2);  // a 3x3 matrix in SE(2).
+        // Step 2: take the ln of disp(m1, m2). Log-mapping for SE(2).
+        // let a1 = Math.atan2(disp_m1_m2[1][0], disp_m1_m2[0][0]);
+        // if (a1 == 0) {  // note the two cases
+        //      ...
+        // }  // Using the code from lecture notes:
+        let a1 = Math.atan2(disp[1][0], disp[0][0]);
+        let p = null;
+        let q = null;
+        if (Math.abs(a1) < 0.01) {
+            p = 1.0 - (Math.pow(a1, 2.0) / 6.0) + (Math.pow(a1, 4.0) / 120.0);
+            q = a1 / 2.0 - (Math.pow(a1, 3.0) / 24.0) + (Math.pow(a1, 5.0) / 720.0);
+        }
+        else {
+            p = Math.sin(a1) / a1;
+            q = (1.0 - Math.cos(a1)) / a1;
+        }
+        let tx = disp[0][2];
+        let ty = disp[1][2];
+        let a2 = (1.0 / (Math.pow(p, 2) + Math.pow(q, 2))) * (p*tx + q*ty);
+        let a3 = (1.0 / (Math.pow(p, 2) + Math.pow(q, 2))) * (-q*tx + p*ty);
+        let ln_disp = [ [0, -a1, a2],
+                        [a1, 0, a3],
+                        [0, 0, 0] ];
+
+        // // Step 3: Map ln_disp to its corresponding Euclidean space, i.e. unwrapping it
+        // // NOTE: is this true? just simple unwrapping?
+        // let I = [...(ln_disp[0]), ...(ln_disp[1]), ...(ln_disp[2])];
+        // // Step 4: Calculate the L-2 norm of the vector I. Done!
+        // let dist = ...
+        // Actually just use the helper function to combine step 3 and 4.
+        // Should be the same as taking Frobenius Norm of ln_disp matrix.
+        // let dist = frobenius_norm_matrix(ln_disp);
+        // Look at professor's message: actually should be [a1 a2 a3].
+
+        // Step 3: Map ln_disp to its corresponding Euclidean space via distinct values
+        let I = [[a1], [a2], [a3]];  // apply the vee operation
+
+        // Step 4: Calculate the L-2 norm of the vector I. Done!
+        let dist = frobenius_norm_matrix(I);
+
+        // Update the string value of dist.
+        settings.disp_based_dist_string = dist.toString();
+        refresh_displays(gui);
+    });
+
+</script>
+</body>
+</html>

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>CPSC 487/587</title>
+    <script src="../../js/setup/setup_mathjax.js"></script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lil-gui@0.19.1/dist/lil-gui.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/10.3.0/math.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/quaternion@1.5.1/quaternion.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/numeric@1.2.6/numeric-1.2.6.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stats.js@0.17.0/build/stats.min.js"></script>
+    <script type="importmap">
+        {
+            "imports": {
+              "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+              "three/": "https://unpkg.com/three@0.160.0/"
+            }
+        }
+    </script>
+</head>
+<body>
+<script type="module">
+    import {ThreeEngine} from "../js/utils/utils_three.js";
+
+    // todo: recreate this visualization, demonstrating your understanding of U(1)
+    // todo: https://yale-cpsc-487-587-internal-djrakita-c95fa6c3239a481a48d29a6b0fd.gitlab.io/html/visualizations/point_mapping_2D_complex_numbers_isometry.html
+    // todo: (no need to draw the unit circle here)
+    // todo: or, feel free to come up with any create visualization here that demonstrates your understanding of U(1)
+
+    // All code below are coded by me:
+    // Import needed helpers
+    import {get_default_lil_gui} from "../../js/utils/utils_three.js";
+    import {mul_matrix_matrix} from "../../js/utils/utils_math.js";
+    import {refresh_displays} from "../../js/utils/utils_three.js";
+
+    // Init engine and spawn the weird 2D shape
+    let engine = ThreeEngine.new_default_2d();
+    engine.add_standard2Dshape_as_mesh_object(0x00eeff);
+
+    // NOTE: we can treat y-coord as i-coord in complex plane the same way WLOG.
+    // and x-coord as real-coord in complex plane too.
+    // NOTE: we'll use the positive form here, since it's the same as negative form result-wise.
+    // The values of zm at theta = 0.
+    let zm_a = 1;  // cos(0)
+    let zm_b = 0;  // +sin(0)   "i"
+
+    // Set up the GUI
+    let settings = {
+        mesh_visible: false,  // init states
+        draw_points: true,
+        wireframe_visible: true,
+        point_size: 0.02,
+        theta: 0,
+    }
+
+    let actions = {
+        reset_theta: function() {
+            settings.theta = 0;
+            refresh_displays(gui);
+            zm_a = 1;
+            zm_b = 0;
+        }
+    };
+
+    let gui = get_default_lil_gui();
+    gui.add(settings, 'draw_points').name('Draw Points');
+    gui.add(settings, 'wireframe_visible').name('Draw Wireframe');
+    gui.add(settings, 'mesh_visible').name('Draw Mesh');
+    gui.add(settings, 'point_size', 0.001, 0.03).name('Point Size');
+
+    let folder = gui.addFolder('Complex Num Controls');
+    folder.add(settings, 'theta', -Math.PI, Math.PI);
+    folder.add(actions, 'reset_theta').name('Reset');  // the button
+
+    // Create the points
+    let standard_points = engine.get_local_vertex_positions_of_mesh_object(0);
+    let wireframe_points = engine.get_local_vertex_positions_of_mesh_object_wireframe(0);
+
+    // Draw the visualization
+    engine.animation_loop(function() {
+        // Update the most-up-to-date zm value based on theta.
+        zm_a = Math.cos(settings.theta);
+        zm_b = Math.sin(settings.theta);
+
+        // Carry out the complex calculation for standard vector:
+        // c1_transformed = (1 + 0i)(zm_a + zm_b*i) = zm_a + zm_b*i = [zm_a, zm_b]
+        let c1 = [zm_a, zm_b];
+        // c2_transformed = (0 + 1i)(zm_a + zm_b*i) = zm_a*i + zm_b*i^2 = [-zm_b, zm_a]
+        let c2 = [-zm_b, zm_a];
+
+        engine.draw_debug_vector([0,0], c1, 0.035, undefined, 0xff3333);
+        engine.draw_debug_vector([0,0], c2, 0.035, undefined, 0x33ff33);
+
+        // Carry out the complex calculation (transformation) for the points
+        // point_transformed = (p[0] + p[1]*i)(zm_a + zm_b*i)
+        // = p[0]*zm_a + p[1]*zm_a*i + p[0]*zm_b*i + p[1]*zm_b*i^2
+        // = (p[0]*zm_a - p[1]*zm_b) + (p[1]*zm_a + p[0]*zm_b) i.
+        // = <p[0]*zm_a-p[1]*zm_b, p[0]*zm_b+p[1]*zm_a>.
+        // = [ [zm_a, -zm_b], [zm_b, zm_a] ] MATMUL [ p[0], p[1] ].
+        let m_zm = [[zm_a, -zm_b], [zm_b, zm_a]];  // note this is the same matrix as SO(2). We can call this U(1) WLOG.
+        // Transform the original points via the rotational U(1) matrix, deduced from the above procedure.
+        let new_standard_points = standard_points.map(point => mul_matrix_matrix(m_zm, point));
+        let new_wireframe_points = wireframe_points.map(point => mul_matrix_matrix(m_zm, point));
+
+        // Update the rest.
+        engine.update_vertex_positions_of_mesh_object(0, new_standard_points);
+        engine.update_vertex_positions_of_mesh_object_wireframe(0, new_wireframe_points);
+
+        if (settings.draw_points) {
+            new_standard_points.forEach(point => {
+                engine.draw_debug_sphere(point, settings.point_size, 0xeeee00);
+            });
+        }
+
+        engine.mesh_objects[0].visible = settings.mesh_visible;
+        engine.set_mesh_object_wireframe_visibility(0, settings.wireframe_visible);
+    });
+
+
+</script>
+</body>
+</html>
