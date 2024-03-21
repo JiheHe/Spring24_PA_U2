@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <title>CPSC 487/587</title>
-    <script src="../../js/setup/setup_mathjax.js"></script>
+    <script src="../js/setup/setup_mathjax.js"></script>
     <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/lil-gui@0.19.1/dist/lil-gui.umd.min.js"></script>
@@ -30,9 +30,9 @@
 
     // All code below are coded by me:
     // Import needed helpers
-    import {get_default_lil_gui} from "../../js/utils/utils_three.js";
-    import {mul_matrix_matrix} from "../../js/utils/utils_math.js";
-    import {refresh_displays} from "../../js/utils/utils_three.js";
+    import {get_default_lil_gui} from "../js/utils/utils_three.js";
+    import {mul_matrix_matrix} from "../js/utils/utils_math.js";
+    import {refresh_displays} from "../js/utils/utils_three.js";
 
     // Init engine and spawn the weird 2D shape
     let engine = ThreeEngine.new_default_2d();
@@ -107,10 +107,10 @@
 
         // Transform the original points via
         // 1) append dummy field 1 to the end of pi
-        // 2) MATMUL by the rotational SO(2) matrix.
+        // 2) MATMUL by the rotational+translational SE(2) matrix.
         // 3) remove last entry in the resulting 3-vector to obtain 2-vector.
-        let new_standard_points = standard_points.map(point => mul_matrix_matrix(m, [...point, 1]).slice(0, 2));
-        let new_wireframe_points = wireframe_points.map(point => mul_matrix_matrix(m, [...point, 1]).slice(0, 2));
+        let new_standard_points = standard_points.map(point => mul_matrix_matrix(m, [ [point[0]], [point[1]], [1] ]).slice(0, 2));
+        let new_wireframe_points = wireframe_points.map(point => mul_matrix_matrix(m, [ [point[0]], [point[1]], [1] ]).slice(0, 2));
 
         // Update the rest.
         engine.update_vertex_positions_of_mesh_object(0, new_standard_points);

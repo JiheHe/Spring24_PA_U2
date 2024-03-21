@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <title>CPSC 487/587</title>
-    <script src="../../js/setup/setup_mathjax.js"></script>
+    <script src="../js/setup/setup_mathjax.js"></script>
     <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/lil-gui@0.19.1/dist/lil-gui.umd.min.js"></script>
@@ -33,10 +33,10 @@
 
     // All code below are coded by me:
     // Import needed helpers
-    import {get_default_lil_gui} from "../../js/utils/utils_three.js";
-    import {mul_matrix_matrix} from "../../js/utils/utils_math.js";
-    import {refresh_displays} from "../../js/utils/utils_three.js";
-    import {frobenius_norm_matrix} from "../../js/utils/utils_math.js";
+    import {get_default_lil_gui} from "../js/utils/utils_three.js";
+    import {mul_matrix_matrix} from "../js/utils/utils_math.js";
+    import {refresh_displays} from "../js/utils/utils_three.js";
+    import {frobenius_norm_matrix} from "../js/utils/utils_math.js";
 
     // Init engine
     let engine = ThreeEngine.new_default_2d();
@@ -104,17 +104,17 @@
                 [Math.sin(settings.theta2), Math.cos(settings.theta2), settings.ty2],
                 [0, 0, 1] ]
         // Obtain the standard vector for each m.
-        let c1 = [1, 0, 1];  // 1-appended
-        let c2 = [0, 1, 1];
-        let c1_m1 = mul_matrix_matrix(m_1, c_1).slice(0, 2),  // apply the transformation
-            c2_m1 = mul_matrix_matrix(m_1, c_2).slice(0, 2),
-            c1_m2 = mul_matrix_matrix(m_2, c_1).slice(0, 2),
-            c2_m2 = mul_matrix_matrix(m_2, c_2).slice(0, 2);
+        let c1 = [ [1], [0], [1] ];  // 1-appended
+        let c2 = [ [0], [1], [1] ];
+        let c1_m1 = mul_matrix_matrix(m_1, c1).slice(0, 2),  // apply the transformation
+            c2_m1 = mul_matrix_matrix(m_1, c2).slice(0, 2),
+            c1_m2 = mul_matrix_matrix(m_2, c1).slice(0, 2),
+            c2_m2 = mul_matrix_matrix(m_2, c2).slice(0, 2);
         // Draw the vectors. Visualization is done.
-        engine.draw_debug_vector([0,0], c1_m1, 0.035, undefined, 0xff0000);
-        engine.draw_debug_vector([0,0], c2_m1, 0.035, undefined, 0x00ff00);
-        engine.draw_debug_vector([0,0], c1_m2, 0.035, undefined, 0xff3333);
-        engine.draw_debug_vector([0,0], c2_m2, 0.035, undefined, 0x33ff33);
+        engine.draw_debug_vector([settings.tx1, settings.ty1], c1_m1, 0.035, undefined, 0xff0000);
+        engine.draw_debug_vector([settings.tx1, settings.ty1], c2_m1, 0.035, undefined, 0x00ff00);
+        engine.draw_debug_vector([settings.tx2, settings.ty2], c1_m2, 0.035, undefined, 0x974a47);
+        engine.draw_debug_vector([settings.tx2, settings.ty2], c2_m2, 0.035, undefined, 0x68a752);
 
         // Calculate disp-based dist.
         // Step 1: find disp(m1, m2) = m1^-1 MATMUL m2.
